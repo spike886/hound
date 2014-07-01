@@ -1,0 +1,50 @@
+.account-section {
+  @extend .repo-listing;
+}
+
+.account-breakdown {
+  table, dl {
+    padding: 1em;
+    width: 100%;
+  }
+
+  dl {
+    border-top: 1px solid $base-border-color;
+    margin-bottom: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  dt {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  dd {
+    @include position(absolute, 0 .65em 0 0);
+    display: inline-block;
+    font-size: 1.5em;
+    margin-top: -.25em;
+    vertical-align: middle;
+  }
+
+  th, dt {
+    color: $light-font-color;
+    font-size: em(12);
+    font-weight: normal;
+    text-transform: uppercase;
+  }
+
+  th, td {
+    padding: 1rem 1rem 0;
+    text-align: center;
+
+    &:first-child {
+      text-align: left;
+    }
+
+    &:last-child {
+      text-align: right;
+    }
+  }
+}
