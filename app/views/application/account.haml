@@ -1,23 +1,50 @@
 = render 'shared/header'
 
-.account-section.account-breakdown
-  %table
-    %thead
+%section.account-section
+  %h2.label-text Your monthly cost
+
+  .account-content.account-breakdown
+    %table
+      %thead
+        %tr
+          %th.label-text Description
+          %th.label-text Base Cost
+          %th.label-text Quantity
+          %th.label-text Subtotal
       %tr
-        %th Description
-        %th Base Cost
-        %th Quantity
-        %th Subtotal
-    %tr
-      %td Private Org Repos
-      %td $xx/mo
-      %td x2
-      %td $xx
-    %tr
-      %td Private Personal Repos
-      %td $x/mo
-      %td x3
-      %td $xx
-  %dl
-    %dt Total Monthly Cost
-    %dd $xx
+        %td Private Org Repos
+        %td $xx/mo
+        %td x2
+        %td $xx
+      %tr
+        %td Private Personal Repos
+        %td $x/mo
+        %td x3
+        %td $xx
+    %dl
+      %dt.label-text Total Monthly Cost
+      %dd $99
+
+%section.account-section
+  %header
+    %h2.label-text Billing Information
+    %a.update-info-link{href: "#"} (Update Info)
+
+  .account-content.billing-info
+    %dl.email-info
+      %dt.label-text Email Address
+      %dd ronronners@example.gov
+    %dl.card-info
+      %dt.label-text Current Card
+      %dd 1234
+
+
+%section.account-section
+  %h2.label-text Active private repos billed to you
+
+  .account-content.repos-breakdown
+    %ul.private-repos
+      - 20.times do
+        %li.repo
+          %a.toggle{href: "#"}
+          %span.name.private{'ng-class' => '{private: repo.private}'} donokuda/arrivals

@@ -1,4 +1,17 @@
 .account-section {
+  margin-bottom: 2em;
+
+  header {
+    margin: 0;
+    padding: 0;
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.account-content {
   @extend .repo-listing;
 }
 
@@ -23,7 +36,7 @@
   dd {
     @include position(absolute, 0 .65em 0 0);
     display: inline-block;
-    font-size: 1.5em;
+    font-size: 1.25em;
     margin-top: -.25em;
     vertical-align: middle;
   }
@@ -46,5 +59,43 @@
     &:last-child {
       text-align: right;
     }
+  }
+}
+
+.label-text {
+  color: $light-font-color;
+  font-size: em(12);
+  font-weight: normal;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.repo-subscription-details {
+  color: #aaa;
+  font-size: .8em;
+  margin-left: 1.4rem;
+
+  .subscription-owner {
+    color: #333;
+  }
+}
+
+.update-info-link {
+  float: right;
+  font-size: .6em;
+  margin-top: -1.55rem;
+}
+
+.billing-info {
+  padding: 1em;
+
+  dl {
+    display: inline-block;
+    margin: 0 1em 0 0;
+    width: 46%;
+  }
+
+  dd {
+   margin: 0;
   }
 }
