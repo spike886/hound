@@ -1,6 +1,2 @@
 %a.toggle{'href' => '', 'ng-click' => 'toggle()'}
-%dl.repo-info
-  %dt.repo-name{'ng-class' => '{private: repo.private}'} {{ repo.full_github_name }}
-  %dd
-    Billed to
-    %span.billed-named croaky
+%span.repo-name{'ng-class' => '{private: repo.private}'} {{ repo.full_github_name }}
