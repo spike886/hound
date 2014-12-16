@@ -1,12 +1,13 @@
-require "fast_spec_helper"
-require "rubocop"
-require "active_support/core_ext/string/strip"
 require "attr_extras"
-require "app/models/style_guide/ruby"
-require "app/models/violation"
+require "rubocop"
 require "sentry-raven"
 
-describe StyleGuide::Ruby, "#violations" do
+require "fast_spec_helper"
+require "app/models/style_guide/base"
+require "app/models/style_guide/ruby"
+require "app/models/violation"
+
+describe StyleGuide::Ruby, "#violations_in_file" do
   context "with default configuration" do
     describe "for { and } as %r literal delimiters" do
       it "returns no violations" do
@@ -303,6 +304,37 @@ end
       end
     end
 
+    context "for argument list spanning multiple lines" do
+      context "when each argument is not on its own line" do
+        it "returns violations" do
+          code = <<-CODE.strip_heredoc
+            validates :name,
+              presence: true,
+              uniqueness: true
+          CODE
+
+          expect(violations_in(code)).to eq [
+            "Align the parameters of a method call if they span more than " +
+              "one line."
+          ]
+        end
+      end
+
+      context "when each argument is on its own line" do
+        it "returns no violations" do
+          code = <<-CODE.strip_heredoc
+            validates(
+              :name,
+              presence: true,
+              uniqueness: true
+            )
+          CODE
+
+          expect(violations_in(code)).to be_empty
+        end
+      end
+    end
+
     context "for required keyword arguments" do
       context "without space after arguments" do
         it "returns no violations" do
@@ -326,7 +358,7 @@ end
             end
           CODE
 
-          violations = violations_in(code).flatten
+          violations = violations_in(code)
 
           expect(violations).to eq [
             "Space found before comma.",
@@ -339,11 +371,12 @@ end
 
   context "with custom configuration" do
     it "finds only one violation" do
-      config = <<-TEXT.strip_heredoc
-        StringLiterals:
-          EnforcedStyle: double_quotes
-          Enabled: true
-      TEXT
+      config = {
+        "StringLiterals" => {
+          "EnforcedStyle" => "double_quotes",
+          "Enabled" => "true",
+        }
+      }
 
       violations = violations_with_config(config)
 
@@ -351,9 +384,7 @@ end
     end
 
     it "can use custom configuration to show rubocop cop names" do
-      config = <<-TEXT.strip_heredoc
-        ShowCopNames: true
-      TEXT
+      config = { "ShowCopNames" => "true" }
 
       violations = violations_with_config(config)
 
@@ -364,13 +395,14 @@ end
 
     context "with old-style syntax" do
       it "has one violation" do
-        config = <<-TEXT.strip_heredoc
-          StringLiterals:
-            EnforcedStyle: single_quotes
-
-          HashSyntax:
-            EnforcedStyle: hash_rockets
-        TEXT
+        config = {
+          "StringLiterals" => {
+            "EnforcedStyle" => "single_quotes"
+          },
+          "HashSyntax" => {
+            "EnforcedStyle" => "hash_rockets"
+          },
+        }
 
         violations = violations_with_config(config)
 
@@ -383,38 +415,15 @@ end
 
     context "with excluded files" do
       it "has no violations" do
-        config = <<-TEXT.strip_heredoc
-          AllCops:
-            Exclude:
-              - lib/test.rb
-        TEXT
+        config = {
+          "AllCops" => {
+            "Exclude" => ["lib/a.rb"]
+          }
+        }
 
         violations = violations_with_config(config)
 
         expect(violations).to be_empty
-      end
-    end
-
-    context "with invalid format" do
-      it "does not raise an error" do
-        config = <<-TEXT.strip_heredoc
-          hello world!
-        TEXT
-
-        expect { violations_with_config(config) }.not_to raise_error
-      end
-    end
-
-    context "with invalid indentation" do
-      it "returns errors" do
-        config = <<-TEXT.strip_heredoc
-          Metrics/LineLength:
-          Max: 15
-        TEXT
-
-        violations = violations_with_config(config)
-
-        expect(violations).to eq ["Use the new Ruby 1.9 hash syntax."]
       end
     end
 
@@ -425,29 +434,20 @@ end
         end
       TEXT
 
-      style_guide = StyleGuide::Ruby.new(config)
-      violations = style_guide.violations(build_file(content))
-      violations.map(&:messages).flatten
+      violations_in(content, config)
     end
   end
 
   private
 
-  def violations_in(content)
-    unless content.end_with?("\n")
-      content += "\n"
-    end
-
-    style_guide = StyleGuide::Ruby.new("{}")
-    style_guide.violations(build_file(content)).map(&:messages)
+  def violations_in(content, config = nil)
+    repo_config = double("RepoConfig", enabled_for?: true, for: config)
+    style_guide = StyleGuide::Ruby.new(repo_config)
+    style_guide.violations_in_file(build_file(content)).flat_map(&:messages)
   end
 
   def build_file(content)
-    double(
-      :file,
-      content: content,
-      filename: "lib/test.rb",
-      modified_line_at: 1,
-    )
+    line = double("Line", content: "blah", number: 1, patch_position: 2)
+    double("CommitFile", content: content, filename: "lib/a.rb", line_at: line)
   end
 end

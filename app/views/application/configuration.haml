@@ -1,67 +1,89 @@
+- content_for :page_title, "Configuration"
+
 = render 'shared/header'
 
 %main.content-doc
-  %h2 Hound configuration (optional)
+  %h2 Configuration
 
   %p
-    By default, Hound uses #{link_to "thoughtbot's style guide", 'https://github.com/thoughtbot/guides/tree/master/style#ruby'}
-    with no additional setup.
+    Hound uses the
+    #{link_to "thoughtbot style guide", "https://github.com/thoughtbot/guides/tree/master/style"}
+    by default, unless you configure it to use your own style guide.
+
+  %h3 Ruby
 
   %p
-    Custom configuration of the style guide is entirely optional and is
-    achieved by specifying rules in
+    To enable Ruby style checking, add the following to
     %em.code .hound.yml
-    file.
-  %p
-    Hound uses #{link_to 'RuboCop', 'https://github.com/bbatsov/rubocop'} gem to
-    handle the style checking. Thus, most of the RuboCop configuration, except
-    inheritance, is supported in Hound as well.
+    in the root of your project
+
+    %code.code-block
+      :preserve
+        ruby:
+          enabled: true
 
   %p
-    Hound will look for
+    Hound uses #{link_to "RuboCop", "https://github.com/bbatsov/rubocop"}
+    internally so you can configure Hound by adding a
+    #{link_to "RuboCop config", "https://github.com/bbatsov/rubocop/blob/master/config/enabled.yml"}
+    to your project and adding the following to
     %em.code .hound.yml
-    file in the root of the repo, and apply the custom configuration on top of the
-    default configuration.
+    in the root of your project.
 
-  %h3 Adding custom config
-  %ol.numbered
-    %li
-      Add a file named
-      %em.code .hound.yml
-      to the root of your repo.
-    %li
-      Add your custom configuration to
-      %em.code .hound.yml
-      file.
-      %p For example:
-      %code.code-block
-        :preserve
-          AllCops:
-            Exclude:
-              - config/initializers/third_party.rb
+    %code.code-block
+      :preserve
+        ruby:
+          enabled: true
+          config_file: config/.rubocop.yml
 
-          Style/LineLength:
-            Description: 'Limit lines to 130 characters.'
-            Max: 130
+  %h3 CoffeeScript
 
-          Style/StringLiterals:
-            EnforcedStyle: single_quotes
+  %p
+    To enable CoffeeScript style checking, add the following to
+    %em.code .hound.yml
+    in the root of your project
 
-          Style/HashSyntax:
-            EnforcedStyle: hash_rockets
+    %code.code-block
+      :preserve
+        coffee_script:
+          enabled: true
 
-          Style/RedundantBegin:
-            Enabled: false
+  %p
+    Hound uses #{link_to "CoffeeLint", "http://www.coffeelint.org/"}
+    internally so you can configure Hound by adding a
+    #{link_to "CoffeeLint config", "https://github.com/clutchski/coffeelint/blob/master/coffeelint.json"}
+    to your project and adding the following to
+    %em.code .hound.yml
+    in the root of your project.
 
-      See #{link_to 'more config options', 'https://github.com/bbatsov/rubocop/blob/master/config/enabled.yml'} in the RuboCop project.
-    %li
-      Commit the changes to your repo, and the following pull requests will use
-      your custom configuration.
-    %li
-      If you set
-      %em.code ShowCopNames: true
-      in your
-      %em.code .hound.yml
-      file, Hound will prefix all of its pull request comments with the Rubocop config key
-      (cop name) of the corresponding style violation. You may find this useful when deciding
-      which style rules you would like to enable or disable.
+    %code.code-block
+      :preserve
+        coffee_script:
+          enabled: true
+          config_file: config/.coffeelint.json
+
+  %h3 JavaScript
+
+  %p
+    To enable JavaScript style checking, add the following to
+    %em.code .hound.yml
+    in the root of your project
+
+    %code.code-block
+      :preserve
+        java_script:
+          enabled: true
+
+  %p
+    Hound uses #{link_to "JSHint", "https://github.com/jshint/jshint/"}
+    internally so you can configure Hound by adding a
+    #{link_to "JSHint config", "https://github.com/thoughtbot/hound/blob/master/config/style_guides/javascript.json"}
+    to your project and adding the following to
+    %em.code .hound.yml
+    in the root of your project.
+
+    %code.code-block
+      :preserve
+        java_script:
+          enabled: true
+          config_file: config/.jshint.json

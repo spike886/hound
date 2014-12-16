@@ -5,29 +5,16 @@ class Repo < ActiveRecord::Base
 
   has_one :subscription
 
+  alias_attribute :name, :full_github_name
+
+  delegate :type, :price, to: :plan, prefix: true
+  delegate :price, to: :subscription, prefix: true
+
   validates :full_github_name, presence: true
   validates :github_id, uniqueness: true, presence: true
 
-  scope :active, -> { where(active: true) }
-
-  def deactivate
-    update_attributes(active: false, hook_id: nil)
-  end
-
-  def price
-    Subscription::PLANS.fetch(plan.to_sym)
-  end
-
-  def plan
-    if private?
-      if in_organization?
-        "organization"
-      else
-        "personal"
-      end
-    else
-      "free"
-    end
+  def self.active
+    where(active: true)
   end
 
   def self.find_or_create_with(attributes)
@@ -36,7 +23,43 @@ class Repo < ActiveRecord::Base
     repo
   end
 
+  def self.find_and_update(github_id, repo_name)
+    repo = find_by(github_id: github_id)
+
+    if repo && repo.full_github_name != repo_name
+      repo.update(full_github_name: repo_name)
+    end
+
+    repo
+  end
+
+  def activate
+    update(active: true)
+  end
+
+  def deactivate
+    update(active: false)
+  end
+
+  def plan
+    Plan.new(self)
+  end
+
   def stripe_subscription_id
-    subscription ? subscription.stripe_subscription_id : nil
+    if subscription
+      subscription.stripe_subscription_id
+    end
+  end
+
+  def exempt?
+    ENV["EXEMPT_ORGS"] && ENV["EXEMPT_ORGS"].split(",").include?(organization)
+  end
+
+  private
+
+  def organization
+    if full_github_name
+      full_github_name.split("/").first
+    end
   end
 end

@@ -1,9 +1,13 @@
 class BuildRunner
-  vattr_initialize :payload
+  pattr_initialize :payload
 
   def run
     if repo && relevant_pull_request?
-      repo.builds.create!(violations: violations)
+      repo.builds.create!(
+        violations: violations,
+        pull_request_number: payload.pull_request_number,
+        commit_sha: payload.head_sha,
+      )
       commenter.comment_on_violations(violations)
       track_reviewed_repo_for_each_user
     end
@@ -20,7 +24,7 @@ class BuildRunner
   end
 
   def style_checker
-    StyleChecker.new(pull_request.pull_request_files, pull_request.config)
+    StyleChecker.new(pull_request)
   end
 
   def commenter
@@ -28,11 +32,12 @@ class BuildRunner
   end
 
   def pull_request
-    @pull_request ||= PullRequest.new(payload, ENV['HOUND_GITHUB_TOKEN'])
+    @pull_request ||= PullRequest.new(payload)
   end
 
   def repo
-    @repo ||= Repo.active.where(github_id: payload.github_repo_id).first
+    @repo ||= Repo.active.
+      find_and_update(payload.github_repo_id, payload.full_repo_name)
   end
 
   def track_reviewed_repo_for_each_user

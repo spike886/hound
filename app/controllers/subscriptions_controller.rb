@@ -6,29 +6,47 @@ class SubscriptionsController < ApplicationController
   respond_to :json
 
   def create
-    if activator.activate(repo, github_token) && create_subscription
+    if activator.activate && create_subscription
       analytics.track_subscribed(repo)
+
       render json: repo, status: :created
     else
-      activator.deactivate(repo, github_token)
+      activator.deactivate
       report_activation_error("Failed to subscribe and activate repo")
+
       head 502
     end
   end
 
   def destroy
-    repo = current_user.repos.find(params[:repo_id])
-
-    if activator.deactivate(repo, session[:github_token]) && delete_subscription
+    if activator.deactivate && delete_subscription
       analytics.track_unsubscribed(repo)
+
       render json: repo, status: :created
     else
       report_activation_error("Failed to unsubscribe and deactivate repo")
+
       head 502
     end
   end
 
   private
+
+  def activator
+    RepoActivator.new(repo: repo, github_token: github_token)
+  end
+
+  def repo
+    @repo ||= current_user.repos.find(params.fetch(:repo_id))
+  end
+
+  def github_token
+    session.fetch(:github_token)
+  end
+
+  def create_subscription
+    RepoSubscriber.subscribe(repo, current_user, params[:card_token])
+  end
 
   def report_activation_error(message)
     report_exception(
@@ -37,24 +55,8 @@ class SubscriptionsController < ApplicationController
     )
   end
 
-  def repo
-    @repo ||= current_user.repos.find(params[:repo_id])
-  end
-
-  def github_token
-    session[:github_token]
-  end
-
-  def activator
-    RepoActivator.new
-  end
-
-  def create_subscription
-    RepoSubscriber.subscribe(repo, current_user, params[:card_token])
-  end
-
   def delete_subscription
-    RepoSubscriber.unsubscribe(repo, current_user)
+    RepoSubscriber.unsubscribe(repo, repo.subscription.user)
   end
 
   def update_email_address

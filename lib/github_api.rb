@@ -1,13 +1,18 @@
-require 'octokit'
-require 'base64'
+require "octokit"
+require "base64"
+require "active_support/core_ext/object/with_options"
 
 class GithubApi
-  SERVICES_TEAM_NAME = 'Services'
+  SERVICES_TEAM_NAME = "Services"
+  PREVIEW_MEDIA_TYPE =
+    ::Octokit::Client::Organizations::ORG_INVITATIONS_PREVIEW_MEDIA_TYPE
 
-  pattr_initialize :token
+  def initialize(token = ENV["HOUND_GITHUB_TOKEN"])
+    @token = token
+  end
 
   def client
-    @client ||= Octokit::Client.new(access_token: token)
+    @client ||= Octokit::Client.new(access_token: @token, auto_paginate: true)
   end
 
   def repos
@@ -42,29 +47,42 @@ class GithubApi
   def create_hook(full_repo_name, callback_endpoint)
     hook = client.create_hook(
       full_repo_name,
-      'web',
+      "web",
       { url: callback_endpoint },
-      { events: ['pull_request'], active: true }
+      { events: ["pull_request"], active: true }
     )
 
-    yield hook if block_given?
+    if block_given?
+      yield hook
+    else
+      hook
+    end
   rescue Octokit::UnprocessableEntity => error
-    unless error.message.include? 'Hook already exists'
+    if error.message.include? "Hook already exists"
+      true
+    else
       raise
     end
   end
 
   def remove_hook(full_github_name, hook_id)
-    client.remove_hook(full_github_name, hook_id)
-  end
+    response = client.remove_hook(full_github_name, hook_id)
 
-  def commit_files(full_repo_name, commit_sha)
-    commit = client.commit(full_repo_name, commit_sha)
-    commit.files
+    if block_given?
+      yield
+    else
+      response
+    end
   end
 
   def pull_request_comments(full_repo_name, pull_request_number)
-    client.pull_request_comments(full_repo_name, pull_request_number)
+    paginate do |page|
+      client.pull_request_comments(
+        full_repo_name,
+        pull_request_number,
+        page: page
+      )
+    end
   end
 
   def pull_request_files(full_repo_name, number)
@@ -79,9 +97,17 @@ class GithubApi
     client.user_teams
   end
 
-  def email_address
-    primary_email = client.emails.detect { |email| email['primary'] }
-    primary_email['email']
+  def accept_pending_invitations
+    with_preview_client do |preview_client|
+      pending_memberships =
+        preview_client.organization_memberships(state: "pending")
+      pending_memberships.each do |pending_membership|
+        preview_client.update_organization_membership(
+          pending_membership["organization"]["login"],
+          state: "active"
+        )
+      end
+    end
   end
 
   private
@@ -118,55 +144,64 @@ class GithubApi
   end
 
   def add_user_to_team(username, team_id)
-    client.add_team_member(team_id, username)
+    with_preview_client do |preview_client|
+      preview_client.add_team_membership(team_id, username)
+    end
+  rescue Octokit::NotFound
+    false
   end
 
   def find_team(name, repo)
     client.org_teams(repo.organization.login).detect do |team|
-      team.name == name
+      team.name.downcase == name.downcase
     end
   end
 
   def create_team(name, repo)
-    client.create_team(
-      repo.organization.login,
-      {
-        name: name,
-        repo_names: [repo.full_name],
-        permission: 'pull'
-      }
-    )
+    team_options = {
+      name: name,
+      repo_names: [repo.full_name],
+      permission: "pull"
+    }
+    client.create_team(repo.organization.login, team_options)
+  rescue Octokit::UnprocessableEntity => e
+    if team_exists_exception?(e)
+      find_team(name, repo)
+    else
+      raise
+    end
   end
 
   def user_repos
-    repos = []
-    page = 1
-
-    loop do
-      results = client.repos(nil, page: page)
-      repos.concat(authorized_repos(results))
-      break unless results.any?
-      page += 1
-    end
-
-    repos
+    repos = paginate { |page| client.repos(nil, page: page) }
+    authorized_repos(repos)
   end
 
   def org_repos
-    repos = []
+    repos = orgs.flat_map do |org|
+      paginate { |page| client.org_repos(org[:login], page: page) }
+    end
 
-    orgs.each do |org|
-      page = 1
+    authorized_repos(repos)
+  end
 
-      loop do
-        results = client.org_repos(org[:login], page: page)
-        repos.concat(authorized_repos(results))
-        break unless results.any?
+  def paginate
+    page = 1
+    results = []
+    all_pages_fetched = false
+
+    until all_pages_fetched do
+      page_results = yield(page)
+
+      if page_results.empty?
+        all_pages_fetched = true
+      else
+        results += page_results
         page += 1
       end
     end
 
-    repos
+    results
   end
 
   def orgs
@@ -174,6 +209,16 @@ class GithubApi
   end
 
   def authorized_repos(repos)
-    repos.select {|repo| repo.permissions.admin }
+    repos.select { |repo| repo.permissions.admin }
+  end
+
+  def team_exists_exception?(exception)
+    exception.errors.any? do |error|
+      error[:field] == "name" && error[:code] == "already_exists"
+    end
+  end
+
+  def with_preview_client(&block)
+    client.with_options(accept: PREVIEW_MEDIA_TYPE, &block)
   end
 end

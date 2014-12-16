@@ -1,20 +1,14 @@
 class PullRequest
-  CONFIG_FILE = '.hound.yml'
-
-  pattr_initialize :payload, :github_token
-
-  def head_includes?(line)
-    head_commit_files.detect { |file| file.modified_lines.include?(line) }
-  end
+  pattr_initialize :payload
 
   def comments
-    api.pull_request_comments(full_repo_name, number)
+    @comments ||= api.pull_request_comments(full_repo_name, number)
   end
 
   def pull_request_files
-    api.pull_request_files(full_repo_name, number).map do |file|
-      build_commit_file(file)
-    end
+    @pull_request_files ||= api.
+      pull_request_files(full_repo_name, number).
+      map { |file| build_commit_file(file) }
   end
 
   def add_comment(violation)
@@ -23,12 +17,8 @@ class PullRequest
       comment: violation.messages.join("<br>"),
       commit: head_commit,
       filename: violation.filename,
-      patch_position: violation.line.patch_position
+      patch_position: violation.patch_position
     )
-  end
-
-  def config
-    head_commit.file_content(CONFIG_FILE)
   end
 
   def opened?
@@ -39,29 +29,25 @@ class PullRequest
     payload.action == "synchronize"
   end
 
-  private
-
-  def head_commit_files
-    head_commit.files
+  def head_commit
+    @head_commit ||= Commit.new(full_repo_name, payload.head_sha, api)
   end
+
+  private
 
   def build_commit_file(file)
     CommitFile.new(file, head_commit)
   end
 
   def api
-    @api ||= GithubApi.new(github_token)
+    @api ||= GithubApi.new
   end
 
   def number
-    payload.number
+    payload.pull_request_number
   end
 
   def full_repo_name
     payload.full_repo_name
-  end
-
-  def head_commit
-    @head_commit ||= Commit.new(full_repo_name, payload.head_sha, api)
   end
 end

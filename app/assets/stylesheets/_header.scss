@@ -9,7 +9,7 @@ header {
     letter-spacing: 4px;
     float: left;
     font-weight: 900;
-    font-size: 2em;
+    font-size: 2.2em;
     margin: 0;
     text-transform: uppercase;
   }
@@ -43,6 +43,12 @@ header {
 
   a, label.toggle {
     color: $light-font-color;
+    display: inline-block;
+    font-size: 0.9em;
+    font-weight: bold;
+    letter-spacing: 2px;
+    padding: 0.2em;
+    text-transform: uppercase;
   }
 
   .dropdown {

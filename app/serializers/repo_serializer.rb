@@ -6,17 +6,16 @@ class RepoSerializer < ActiveModel::Serializer
     :github_id,
     :id,
     :in_organization,
-    :price,
     :price_in_cents,
     :private,
     :stripe_subscription_id,
   )
 
   def price_in_cents
-    object.price * 100
+    object.plan_price * 100
   end
 
   def full_plan_name
-    "#{object.plan} repo".titleize
+    "#{object.plan_type} repo".titleize
   end
 end

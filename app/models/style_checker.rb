@@ -2,33 +2,50 @@
 # Builds style guide based on file extension.
 # Delegates to style guide for line violations.
 class StyleChecker
-  def initialize(modified_files, custom_config = nil)
-    @modified_files = modified_files
-    @custom_config = custom_config || "{}"
+  def initialize(pull_request)
+    @pull_request = pull_request
+    @style_guides = {}
   end
 
   def violations
-    @violations ||= unremoved_files.map do |file|
-      style_guide(file.filename).violations(file)
-    end.flatten
+    @violations ||= Violations.new.push(*violations_in_checked_files).to_a
   end
 
   private
 
-  def unremoved_files
-    @modified_files.reject { |file| file.removed? }
+  attr_reader :pull_request, :style_guides
+
+  def violations_in_checked_files
+    files_to_check.flat_map do |file|
+      style_guide(file.filename).violations_in_file(file)
+    end
+  end
+
+  def files_to_check
+    pull_request.pull_request_files.reject(&:removed?).select do |file|
+      style_guide(file.filename).enabled?
+    end
   end
 
   def style_guide(filename)
-    style_guide_builder(filename).new(@custom_config)
+    style_guide_class = style_guide_class(filename)
+    style_guides[style_guide_class] ||= style_guide_class.new(config)
   end
 
-  def style_guide_builder(filename)
+  def style_guide_class(filename)
     case filename
-    when /.*\.rb$/
-      @ruby_style_guide ||= StyleGuide::Ruby
+    when /.+\.rb\z/
+      StyleGuide::Ruby
+    when /.+\.coffee\z/
+      StyleGuide::CoffeeScript
+    when /.+\.js\z/
+      StyleGuide::JavaScript
     else
-      @null_style_guide ||= StyleGuide::Null
+      StyleGuide::Unsupported
     end
+  end
+
+  def config
+    @config ||= RepoConfig.new(pull_request.head_commit)
   end
 end
