@@ -1,20 +1,26 @@
-require 'spec_helper'
+require "rails_helper"
 
 describe Build do
-  it { should belong_to :repo }
-  it { should validate_presence_of :repo }
-  it { should serialize(:violations).as(Array) }
+  describe "associations" do
+    it { should belong_to :repo }
+    it { should have_many(:file_reviews).dependent(:destroy) }
+    it { should have_many(:violations).dependent(:destroy) }
+  end
+
+  describe "validations" do
+    it { should validate_presence_of :repo }
+  end
 end
 
 describe Build, '#status' do
   it 'returns passed' do
-    build = Build.new(violations: [])
+    build = build(:build)
 
     expect(build.status).to eq 'passed'
   end
 
   it 'returns failed' do
-    build = Build.new(violations: ['something'])
+    build = build(:build, :failed)
 
     expect(build.status).to eq 'failed'
   end

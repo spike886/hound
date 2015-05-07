@@ -1,6 +1,10 @@
 language: ruby
+sudo: false
 cache: bundler
-rvm: 2.1.5
+rvm: 2.2.2
+
+addons:
+  postgresql: "9.3"
 
 before_install:
   - export DISPLAY=:99.0
@@ -8,6 +12,7 @@ before_install:
 
 before_script:
   - psql -c 'create database "hound_test";' -U postgres
+  - cp .sample.env .env.test
 
 services:
   - redis-server
