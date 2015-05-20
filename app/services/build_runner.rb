@@ -48,7 +48,7 @@ class BuildRunner
   end
 
   def token
-    @token ||= user_token || ENV["HOUND_GITHUB_TOKEN"]
+    @token ||= ENV["HOUND_GITHUB_TOKEN"] || user_token
   end
 
   def user_token
